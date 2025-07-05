@@ -3,7 +3,6 @@ package com.example.SportNotifyApp.crawler;
 import com.example.SportNotifyApp.model.Match;
 import com.example.SportNotifyApp.repository.MatchRepository;
 import com.example.SportNotifyApp.util.FileUtil;
-
 import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDate;
@@ -23,52 +22,51 @@ public class EspnCrawlerService {
 
     public void crawl() {
         try {
-            // Lấy ngày hôm nay + 1
-            LocalDate tomorrow = LocalDate.now().plusDays(1);
-            String dateStr = tomorrow.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+            // Ngày hôm sau
+            LocalDate matchDate = LocalDate.now().plusDays(1);
+            String dateStr = matchDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
             String url = "https://www.espn.com/soccer/schedule/_/date/" + dateStr;
 
             Document doc = Jsoup.connect(url).get();
 
+            // Ghi HTML ra file
             FileUtil.saveDocumentToHtml(doc, "D:/backend/sport_notify_app/doc.html");
-            
-            Elements sections = doc.select("section"); // mỗi ngày
 
-            for (Element section : sections) {
-                String date = section.select("h2").text();
+            // Tất cả giải đấu
+            Elements leagueDivs = doc.select(".mt3 > div");
 
-                Elements cards = section.select(".Card");
+            for (Element leagueDiv : leagueDivs) {
+                // Tên giải đấu
+                String league = leagueDiv.selectFirst(".Table__Title") != null
+                        ? leagueDiv.selectFirst(".Table__Title").text()
+                        : "Unknown League";
 
-                for (Element card : cards) {
-                    String league = card.select(".Card__Header").text();
-                    Elements matches = card.select("table tbody tr");
+                Elements matchRows = leagueDiv.select("table.Table > tbody.Table__TBODY > tr");
 
-                    for (Element match : matches) {
-                        Elements teamNames = match.select("td.team-name");
-                        if (teamNames.size() < 2)
-                            continue;
+                for (Element row : matchRows) {
+                    try {
+                        String teamA = row.select(".events__col.Table__TD a:nth-of-type(2)").text();
+                        String teamB = row.select(".colspan__col.Table__TD a:nth-of-type(2)").text();
+                        String time = row.select(".date__col.Table__TD a:nth-of-type(1)").text();
 
-                        String teamA = teamNames.first().text();
-                        String teamB = teamNames.last().text();
-                        String time = match.select("td.match-time").text();
+                        if (teamA.isEmpty() || teamB.isEmpty() || time.isEmpty()) continue;
 
-                        // Convert date String to LocalDate
-                        java.time.LocalDate localDate = java.time.LocalDate.parse(date);
+                        // Tránh trùng lặp
+                        if (matchRepository.existsByMatchDateAndTeamAAndTeamB(matchDate, teamA, teamB)) continue;
 
-                        // Tránh insert trùng lặp
-                        if (matchRepository.existsByMatchDateAndTeamAAndTeamB(localDate, teamA, teamB))
-                            continue;
-
-                        Match newMatch = Match.builder()
-                                .matchDate(localDate)
+                        Match match = Match.builder()
+                                .matchDate(matchDate)
                                 .league(league)
                                 .teamA(teamA)
                                 .teamB(teamB)
                                 .time(time)
                                 .build();
 
-                        matchRepository.save(newMatch);
+                        matchRepository.save(match);
                         System.out.printf("✅ Saved: %s vs %s at %s (%s)%n", teamA, teamB, time, league);
+
+                    } catch (Exception ex) {
+                        System.err.println("⚠️ Skipping row due to parse error: " + ex.getMessage());
                     }
                 }
             }
