@@ -20,6 +20,8 @@ import org.springframework.stereotype.Service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.springframework.beans.factory.annotation.Value;
 @Service
 @RequiredArgsConstructor
 public class EspnCrawlerService {
@@ -27,12 +29,18 @@ public class EspnCrawlerService {
     private static final Logger log = LoggerFactory.getLogger(EspnCrawlerService.class);
     private final MatchRepository matchRepository;
 
+    @Value("${excel.file.path}")
+    private String excelFilePath;
+
+    @Value("${url.crawler}")
+    private String urlCrawler;
+
     public void crawl() {
         try {
             // Ngày hôm sau
             LocalDate matchDate = LocalDate.now().plusDays(1);
             String dateStr = matchDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-            String url = "https://www.espn.com/soccer/schedule/_/date/" + dateStr;
+            String url = urlCrawler + dateStr;
 
             Document doc = Jsoup.connect(url).get();
 
@@ -86,7 +94,7 @@ public class EspnCrawlerService {
                 if (!savedMatches.isEmpty()) {
                     List<String> headers = List.of("Date", "League", "Team A", "Team B", "Time");
                     List<String> fields = List.of("matchDate", "league", "teamA", "teamB", "time");
-                    ExcelUtil.writeToExcel(savedMatches, headers, fields, "D:/backend/sport_notify_app/matches.xlsx");
+                    ExcelUtil.writeToExcel(savedMatches, headers, fields, excelFilePath);
                 }
         } catch (Exception e) {
            log.error("❌ Error while crawling: {}", e.getMessage());
