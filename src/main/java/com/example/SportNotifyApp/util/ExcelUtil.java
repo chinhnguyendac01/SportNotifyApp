@@ -2,6 +2,8 @@ package com.example.SportNotifyApp.util;
 
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -10,10 +12,12 @@ import java.util.List;
 
 public class ExcelUtil {
 
+    private static final Logger log = LoggerFactory.getLogger(ExcelUtil.class);
+
      public static <T> void writeToExcel(List<T> dataList, List<String> headers, List<String> fieldNames,
                String filePath) {
           if (dataList == null || dataList.isEmpty()) {
-               System.out.println("⚠️ No data to write.");
+               log.warn("⚠️ No data to write.");
                return;
           }
 
@@ -41,11 +45,11 @@ public class ExcelUtil {
                // Lưu file
                try (FileOutputStream fos = new FileOutputStream(filePath)) {
                     workbook.write(fos);
-                    System.out.println("📄 Excel file created: " + filePath);
+                    log.info("📄 Excel file created: " + filePath);
                }
 
           } catch (IOException e) {
-               System.err.println("❌ Failed to write Excel file: " + e.getMessage());
+               log.error("❌ Failed to write Excel file: " + e.getMessage());
           }
      }
 

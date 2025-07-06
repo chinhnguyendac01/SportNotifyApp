@@ -18,10 +18,13 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.stereotype.Service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 @Service
 @RequiredArgsConstructor
 public class EspnCrawlerService {
 
+    private static final Logger log = LoggerFactory.getLogger(EspnCrawlerService.class);
     private final MatchRepository matchRepository;
 
     public void crawl() {
@@ -71,10 +74,10 @@ public class EspnCrawlerService {
 
                         matchRepository.save(match);
                         savedMatches.add(match);
-                        System.out.printf("✅ Saved: %s vs %s at %s (%s)%n", teamA, teamB, time, league);
+                        log.info("✅ Saved: {} vs {} at {} ({})", teamA, teamB, time, league);
 
                     } catch (Exception ex) {
-                        System.err.println("⚠️ Skipping row due to parse error: " + ex.getMessage());
+                        log.error("⚠️ Skipping row due to parse error: {}", ex.getMessage());
                     }
                 }
                
@@ -86,7 +89,7 @@ public class EspnCrawlerService {
                     ExcelUtil.writeToExcel(savedMatches, headers, fields, "D:/backend/sport_notify_app/matches.xlsx");
                 }
         } catch (Exception e) {
-            System.err.println("❌ Error while crawling: " + e.getMessage());
+           log.error("❌ Error while crawling: {}", e.getMessage());
         }
     }
 }
